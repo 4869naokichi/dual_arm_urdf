@@ -82,31 +82,30 @@ uv run --python 3.12 generate_urdf.py
 #### 中央柱 (合計 500 mm の内訳)
 | 変数名 | 意味 | 現在値 |
 |---|---|---|
-| `COLUMN_LOWER_LEN` | 柱底（床）から腰回転軸まで Z | 180 mm |
-| `COLUMN_UPPER_LEN` | 腰回転軸から柱頂上（首根本）まで Z | 320 mm |
+| `COLUMN_LOWER_LEN` | 柱底（床）から腰回転軸まで Z | 261.5 mm |
+| `COLUMN_UPPER_LEN` | 腰回転軸から柱頂上（首根本）まで Z | 237.5 mm |
 | `COLUMN_SIZE` | アルミフレーム断面（□） | 40 mm |
-| `WAIST_HOUSING_HEIGHT` | 腰XM540ハウジング Z 厚さ | 60 mm |
-| `WAIST_HOUSING_RADIUS` | 腰XM540ハウジング外半径 | 60 mm |
 
 #### 肩マウント
 | 変数名 | 意味 | 現在値 |
 |---|---|---|
-| `SHOULDER_BRACKET_HALFWIDTH` | 柱中心から片側の肩 J1 軸までの Y 距離 | 110 mm |
-| `SHOULDER_BRACKET_Z` | 柱頂上から肩 J1 軸への Z オフセット（負=下） | -20 mm |
+| `SHOULDER_BRACKET_HALFWIDTH` | 柱中心から片側の肩 J1 軸までの Y 距離 | 71.5 mm |
+| `SHOULDER_BRACKET_Z` | 柱頂上から肩 J1 軸への Z オフセット（負=下） | -27.5 mm |
 
 #### 片腕（左右同値、ホームポーズ=腕を下に伸ばした状態で Z 軸=腕の長軸）
 | 変数名 | 意味 | 現在値 |
 |---|---|---|
-| `J1_TO_J2` | J1（肩pitch）→ J2（肩roll）軸間 Z 距離 | 50 mm |
-| `J2_TO_J3` | J2（肩roll）→ J3（上腕yaw）軸間 Z 距離 | 60 mm |
-| `UPPER_ARM_LEN` | J3 → J4（肘pitch）軸間 Z 距離 = 上腕長 | 150 mm |
-| `J4_TO_J5` | J4 → J5（前腕yaw）軸間 Z 距離 | 40 mm |
-| `FOREARM_LEN` | J5 → J6（手首pitch）軸間 Z 距離 = 前腕長 | 130 mm |
-| `J6_TO_J7` | J6 → J7（手首roll）軸間 Z 距離 | 40 mm |
-| `GRIPPER_BASE_LEN` | J7 → 指の付け根 Z | 40 mm |
-| `GRIPPER_FINGER_LEN` | 指の長さ | 60 mm |
-| `GRIPPER_HALF_OPEN` | 片指の最大ストローク（並行開閉、両側で2倍開く） | 20 mm |
-| `GRIPPER_REST_Y` | 全閉時の指中心の Y オフセット（指厚みぶん） | 15 mm |
+| `J1_TO_J2` | J1（肩pitch）→ J2（肩roll）軸間 Y オフセット | 67.25 mm |
+| `J2_TO_J3_X` | J2（肩roll）→ J3（上腕yaw）軸間 X オフセット（前方+） | 15.5 mm |
+| `J2_TO_J3` | J2（肩roll）→ J3（上腕yaw）軸間 Z 距離 | 82.5 mm |
+| `UPPER_ARM_LEN` | J3 → J4（肘pitch）軸間 Z 距離 = 上腕長 | 41 mm |
+| `J4_TO_J5` | J4 → J5（前腕yaw）軸間 Z 距離 | 64 mm |
+| `FOREARM_LEN` | J5 → J6（手首pitch）軸間 Z 距離 = 前腕長 | 40.5 mm |
+| `J6_TO_J7` | J6 → J7（手首roll）軸間 Z 距離 | 28 mm |
+| `GRIPPER_BASE_LEN` | J7 → 指の付け根 Z | 90 mm |
+| `GRIPPER_FINGER_LEN` | 指の長さ | 85 mm |
+| `GRIPPER_HALF_OPEN` | 片指の最大ストローク（並行開閉、両側で2倍開く） | 37 mm |
+| `GRIPPER_REST_Y` | 全閉時の指中心の Y オフセット（指厚みぶん） | 18.36 mm |
 
 #### 頭
 | 変数名 | 意味 | 現在値 |

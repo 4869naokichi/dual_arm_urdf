@@ -31,8 +31,9 @@ SHOULDER_BRACKET_Z         = -0.0275 # 柱頂上 → 肩J1軸のZ (負=下) [実
 # --- 腕 (片側ぶん、左右対称に適用) ---
 # J1 = 肩 PITCH  (axis Y, 腕を前後に振る)         [XM540]
 # J2 = 肩 ROLL   (axis X, 腕を体側から外側へ開く) [XM540]
-J1_TO_J2          = 0.06725  # J1 → J2 の Z オフセット [実測]
+J1_TO_J2          = 0.06725  # J1 → J2 の Y オフセット [実測]
 # J3 = 上腕 YAW  (axis Z, 上腕の長軸まわり回旋)   [XM540]
+J2_TO_J3_X        = 0.0155   # J2 → J3 の X オフセット (前方+) [実測]
 J2_TO_J3          = 0.0825   # J2 → J3 の Z オフセット [実測]
 # J4 = 肘 PITCH  (axis Y, 肘の屈伸)               [XM430]
 UPPER_ARM_LEN     = 0.041    # J3 → J4 [実測]
@@ -48,6 +49,12 @@ GRIPPER_BASE_LEN   = 0.090   # J7軸 → 指の並進高さ Z [実測]
 GRIPPER_FINGER_LEN = 0.085   # 指の長さ (並進高さ → 指先 = TCP位置) [実測]
 GRIPPER_HALF_OPEN  = 0.037   # 片指の最大ストローク [実測]、両側合計74mm
 GRIPPER_REST_Y     = 0.01836 # 全閉時の指中心Y [実測]
+
+# --- STL メッシュ原点に合わせるための暫定オフセット ---
+# link7 STL は J7 軸原点、gripper_base STL はグリッパ取付面原点として書き出している前提。
+MESH_J7_TO_GRIPPER_BASE       = 0.0700  # J7 軸 → gripper_base 原点 Z 距離 [L STL bbox]
+MESH_GRIPPER_BASE_TO_FINGER_Z = 0.0205  # gripper_base 原点 → finger 並進原点 Z 距離 [L STL bbox]
+SHOW_PLACEHOLDER_ARM_GEOMETRY = False   # STL 未作成リンクは空リンクにして重なりを避ける
 
 # --- 頭 (パン・チルト) ---
 NECK_BASE_HEIGHT  = 0.043    # 柱頂上 → パン軸 Z [実測]
@@ -208,13 +215,44 @@ def joint(name, jtype, parent, child, xyz=(0, 0, 0), rpy=(0, 0, 0),
 
 
 def materials():
-    return """  <material name="black">  <color rgba="0.10 0.10 0.10 1.0"/></material>
+    return """  <material name="black">  <color rgba="0.24 0.24 0.24 1.0"/></material>
   <material name="green">  <color rgba="0.05 0.65 0.25 1.0"/></material>
   <material name="gray">   <color rgba="0.55 0.55 0.55 1.0"/></material>
   <material name="silver"> <color rgba="0.80 0.80 0.82 1.0"/></material>
   <material name="orange"> <color rgba="0.95 0.55 0.10 1.0"/></material>
   <material name="blue">   <color rgba="0.10 0.30 0.85 1.0"/></material>
 """
+
+
+ARM_MESH_BBOX = {
+    "link1": (0.05879, 0.09111, 0.05797),
+    "link2": (0.05850, 0.03350, 0.09055),
+    "link3": (0.04600, 0.04260, 0.06397),
+    "link4": (0.04650, 0.04140, 0.07090),
+    "link5": (0.04600, 0.04240, 0.06347),
+    "link6": (0.02000, 0.04140, 0.03050),
+    "link7": (0.04650, 0.03910, 0.08080),
+    "gripper_base": (0.08150, 0.15100, 0.02050),
+    "finger_left": (0.06100, 0.03336, 0.08880),
+    "finger_right": (0.06100, 0.03336, 0.08880),
+}
+
+
+def mesh_exists(link_name):
+    return (Path(__file__).parent / "meshes" / f"{link_name}.stl").exists()
+
+
+def arm_link(link_name, suffix, fallback_xml, color="black", mass=0.1):
+    if mesh_exists(link_name):
+        return link_mesh(
+            link_name,
+            mesh_file=f"{link_name}.stl",
+            bbox=ARM_MESH_BBOX.get(suffix),
+            color=color,
+            mass=mass)
+    if not SHOW_PLACEHOLDER_ARM_GEOMETRY:
+        return link_empty(link_name)
+    return fallback_xml
 
 
 # --------------------------------------------------------------------
@@ -224,18 +262,18 @@ def build_arm(side, y_sign):
     out = []
     p = f"{side}_"  # プレフィクス
 
-    # 肩のマウントブラケット (柱から左右に張り出すバー、固定)
-    out.append(link_box(
-        f"{p}shoulder_mount",
-        size=(0.040, 2 * SHOULDER_BRACKET_HALFWIDTH * 0 + 0.040, 0.030),
-        color="black", mass=0.05))
+    # 肩マウントは torso_link STL に含める。ここは J1 位置を作る固定フレームだけ。
+    out.append(link_empty(f"{p}shoulder_mount"))
     out.append(joint(
         f"{p}shoulder_mount_fixed", "fixed",
         parent="torso_link", child=f"{p}shoulder_mount",
         xyz=(0, y_sign * SHOULDER_BRACKET_HALFWIDTH, COLUMN_UPPER_LEN + SHOULDER_BRACKET_Z)))
 
     # J1: 肩 PITCH (axis Y)  [XM540]
-    out.append(link_box(f"{p}link1", size=XM540, color="black", mass=0.165))
+    out.append(arm_link(
+        f"{p}link1", "link1",
+        link_box(f"{p}link1", size=XM540, color="black", mass=0.165),
+        color="green", mass=0.165))
     out.append(joint(
         f"{p}joint1", "revolute",
         parent=f"{p}shoulder_mount", child=f"{p}link1",
@@ -243,79 +281,110 @@ def build_arm(side, y_sign):
 
     # J2: 肩 ROLL (axis X)  [XM540]
     # J1→J2 は外側 (Y方向) オフセット。J1のブラケットが横に伸びてJ2を保持する構造。
-    out.append(link_box(f"{p}link2", size=XM540, color="black", mass=0.165))
+    out.append(arm_link(
+        f"{p}link2", "link2",
+        link_box(f"{p}link2", size=XM540, color="black", mass=0.165),
+        color="black", mass=0.165))
     out.append(joint(
         f"{p}joint2", "revolute",
         parent=f"{p}link1", child=f"{p}link2",
         xyz=(0, y_sign * J1_TO_J2, 0), axis=(1, 0, 0)))
 
     # J3: 上腕 YAW (axis Z, 上腕長軸)  [XM540]
-    out.append(link_cyl(f"{p}link3", radius=0.022, length=UPPER_ARM_LEN,
-                       origin_xyz=(0, 0, -UPPER_ARM_LEN / 2),
-                       color="green", mass=0.20))
+    out.append(arm_link(
+        f"{p}link3", "link3",
+        link_cyl(f"{p}link3", radius=0.022, length=UPPER_ARM_LEN,
+                 origin_xyz=(0, 0, -UPPER_ARM_LEN / 2),
+                 color="green", mass=0.20),
+        color="green", mass=0.20))
     out.append(joint(
         f"{p}joint3", "revolute",
         parent=f"{p}link2", child=f"{p}link3",
-        xyz=(0, 0, -J2_TO_J3), axis=(0, 0, 1)))
+        xyz=(J2_TO_J3_X, 0, -J2_TO_J3), axis=(0, 0, 1)))
 
     # J4: 肘 PITCH (axis Y)  [XM430]
-    out.append(link_box(f"{p}link4", size=XM430, color="black", mass=0.082))
+    out.append(arm_link(
+        f"{p}link4", "link4",
+        link_box(f"{p}link4", size=XM430, color="black", mass=0.082),
+        color="black", mass=0.082))
     out.append(joint(
         f"{p}joint4", "revolute",
         parent=f"{p}link3", child=f"{p}link4",
         xyz=(0, 0, -UPPER_ARM_LEN), axis=(0, 1, 0)))
 
     # J5: 前腕 YAW (axis Z, 前腕長軸)  [XM430]
-    out.append(link_cyl(f"{p}link5", radius=0.018, length=FOREARM_LEN,
-                       origin_xyz=(0, 0, -FOREARM_LEN / 2),
-                       color="green", mass=0.15))
+    out.append(arm_link(
+        f"{p}link5", "link5",
+        link_cyl(f"{p}link5", radius=0.018, length=FOREARM_LEN,
+                 origin_xyz=(0, 0, -FOREARM_LEN / 2),
+                 color="green", mass=0.15),
+        color="green", mass=0.15))
     out.append(joint(
         f"{p}joint5", "revolute",
         parent=f"{p}link4", child=f"{p}link5",
         xyz=(0, 0, -J4_TO_J5), axis=(0, 0, 1)))
 
     # J6: 手首 PITCH (axis Y)  [XM430]
-    out.append(link_box(f"{p}link6", size=XM430, color="black", mass=0.082))
+    out.append(arm_link(
+        f"{p}link6", "link6",
+        link_box(f"{p}link6", size=XM430, color="black", mass=0.082),
+        color="black", mass=0.082))
     out.append(joint(
         f"{p}joint6", "revolute",
         parent=f"{p}link5", child=f"{p}link6",
         xyz=(0, 0, -FOREARM_LEN), axis=(0, 1, 0)))
 
     # J7: 手首 ROLL (axis Z, 手先長軸)  [XM430]
-    out.append(link_box(f"{p}link7", size=XM430, color="black", mass=0.082))
+    out.append(arm_link(
+        f"{p}link7", "link7",
+        link_box(f"{p}link7", size=XM430, color="black", mass=0.082),
+        color="black", mass=0.082))
     out.append(joint(
         f"{p}joint7", "revolute",
         parent=f"{p}link6", child=f"{p}link7",
         xyz=(0, 0, -J6_TO_J7), axis=(0, 0, 1)))
 
-    # グリッパ本体 (リンク7の先端に直接固定、フレーム原点はJ7軸)
-    out.append(link_box(f"{p}gripper_base", size=(0.040, 0.060, GRIPPER_BASE_LEN),
-                       origin_xyz=(0, 0, -GRIPPER_BASE_LEN / 2),
-                       color="green", mass=0.05))
+    use_gripper_mesh = mesh_exists(f"{p}gripper_base")
+    gripper_base_z = -MESH_J7_TO_GRIPPER_BASE if use_gripper_mesh else 0
+    finger_z = -MESH_GRIPPER_BASE_TO_FINGER_Z if use_gripper_mesh else -GRIPPER_BASE_LEN
+
+    # グリッパ本体
+    out.append(arm_link(
+        f"{p}gripper_base", "gripper_base",
+        link_box(f"{p}gripper_base", size=(0.040, 0.060, GRIPPER_BASE_LEN),
+                 origin_xyz=(0, 0, -GRIPPER_BASE_LEN / 2),
+                 color="green", mass=0.05),
+        color="silver", mass=0.05))
     out.append(joint(
         f"{p}gripper_base_fixed", "fixed",
         parent=f"{p}link7", child=f"{p}gripper_base",
-        xyz=(0, 0, 0)))
+        xyz=(0, 0, gripper_base_z)))
 
     # 左指 (prismatic, +Y 方向に並進で開く)
-    out.append(link_box(f"{p}finger_left", size=(0.010, 0.012, GRIPPER_FINGER_LEN),
-                       origin_xyz=(0, 0, -GRIPPER_FINGER_LEN / 2),
-                       color="silver", mass=0.01))
+    out.append(arm_link(
+        f"{p}finger_left", "finger_left",
+        link_box(f"{p}finger_left", size=(0.010, 0.012, GRIPPER_FINGER_LEN),
+                 origin_xyz=(0, 0, -GRIPPER_FINGER_LEN / 2),
+                 color="silver", mass=0.01),
+        color="green", mass=0.01))
     out.append(joint(
         f"{p}gripper_joint", "prismatic",
         parent=f"{p}gripper_base", child=f"{p}finger_left",
-        xyz=(0, GRIPPER_REST_Y, -GRIPPER_BASE_LEN), axis=(0, 1, 0),
+        xyz=(0, GRIPPER_REST_Y, finger_z), axis=(0, 1, 0),
         lower=0.0, upper=GRIPPER_HALF_OPEN,
         effort=20.0, velocity=0.1))
 
     # 右指 (mimic で対称、-Y 方向に並進)
-    out.append(link_box(f"{p}finger_right", size=(0.010, 0.012, GRIPPER_FINGER_LEN),
-                       origin_xyz=(0, 0, -GRIPPER_FINGER_LEN / 2),
-                       color="silver", mass=0.01))
+    out.append(arm_link(
+        f"{p}finger_right", "finger_right",
+        link_box(f"{p}finger_right", size=(0.010, 0.012, GRIPPER_FINGER_LEN),
+                 origin_xyz=(0, 0, -GRIPPER_FINGER_LEN / 2),
+                 color="silver", mass=0.01),
+        color="green", mass=0.01))
     out.append(joint(
         f"{p}gripper_mimic", "prismatic",
         parent=f"{p}gripper_base", child=f"{p}finger_right",
-        xyz=(0, -GRIPPER_REST_Y, -GRIPPER_BASE_LEN), axis=(0, 1, 0),
+        xyz=(0, -GRIPPER_REST_Y, finger_z), axis=(0, 1, 0),
         lower=-GRIPPER_HALF_OPEN, upper=0.0,
         effort=20.0, velocity=0.1,
         mimic=(f"{p}gripper_joint", -1.0, 0.0)))
@@ -325,7 +394,7 @@ def build_arm(side, y_sign):
     out.append(joint(
         f"{p}tcp_fixed", "fixed",
         parent=f"{p}gripper_base", child=f"{p}tcp",
-        xyz=(0, 0, -GRIPPER_BASE_LEN - GRIPPER_FINGER_LEN)))
+        xyz=(0, 0, finger_z - GRIPPER_FINGER_LEN)))
 
     return "".join(out)
 
