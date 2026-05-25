@@ -18,42 +18,45 @@ from pathlib import Path
 # ====================================================================
 
 # --- 中央柱 (アルミフレーム) ---
-# 制約: COLUMN_LOWER_LEN + COLUMN_UPPER_LEN = 0.500 (柱全長 500 mm)
-COLUMN_LOWER_LEN     = 0.180   # 床(柱底) から 腰回転軸 まで
-COLUMN_UPPER_LEN     = 0.320   # 腰回転軸 から 柱の頂上(首) まで
-COLUMN_SIZE          = 0.040   # 角アルミ断面 (□40 想定、実測で更新)
-WAIST_HOUSING_RADIUS = 0.060   # 腰XM540 ハウジング外径(可視化用)
-WAIST_HOUSING_HEIGHT = 0.060
+# 制約: COLUMN_LOWER_LEN + COLUMN_UPPER_LEN = 0.499 (柱実測 499 mm)
+COLUMN_LOWER_LEN     = 0.2615  # 床(柱底) から 腰回転軸 まで [実測]
+COLUMN_UPPER_LEN     = 0.2375  # 腰回転軸 から 柱の頂上(首) まで [実測]
+COLUMN_SIZE          = 0.040   # 角アルミ断面 (□40) [実測]
+# (waist_link は torso_link にマージ済み、ハウジング寸法は不要)
 
 # --- 肩のブラケット (柱頂上から左右に伸びる水平バー) ---
-SHOULDER_BRACKET_HALFWIDTH = 0.110  # 柱中心から肩関節 J1 までの Y 距離
-SHOULDER_BRACKET_Z         = -0.020 # 柱頂上から下方向への肩 J1 の Z オフセット (負=下)
+SHOULDER_BRACKET_HALFWIDTH = 0.0715  # 柱中心 → 片肩J1軸のY [実測]
+SHOULDER_BRACKET_Z         = -0.0275 # 柱頂上 → 肩J1軸のZ (負=下) [実測]
 
 # --- 腕 (片側ぶん、左右対称に適用) ---
 # J1 = 肩 PITCH  (axis Y, 腕を前後に振る)         [XM540]
 # J2 = 肩 ROLL   (axis X, 腕を体側から外側へ開く) [XM540]
-J1_TO_J2          = 0.050    # J1 → J2 の Z オフセット (下方向)
+J1_TO_J2          = 0.06725  # J1 → J2 の Z オフセット [実測]
 # J3 = 上腕 YAW  (axis Z, 上腕の長軸まわり回旋)   [XM540]
-J2_TO_J3          = 0.060    # J2 → J3 の Z オフセット
+J2_TO_J3          = 0.0805   # J2 → J3 の Z オフセット [実測]
 # J4 = 肘 PITCH  (axis Y, 肘の屈伸)               [XM430]
-UPPER_ARM_LEN     = 0.150    # J3 → J4
+UPPER_ARM_LEN     = 0.041    # J3 → J4 [実測]
 # J5 = 前腕 YAW  (axis Z, 前腕の長軸まわり回旋)   [XM430]
-J4_TO_J5          = 0.040
+J4_TO_J5          = 0.064    # [実測]
 # J6 = 手首 PITCH (axis Y)                        [XM430]
-FOREARM_LEN       = 0.130    # J5 → J6
+FOREARM_LEN       = 0.0405   # J5 → J6 [実測]
 # J7 = 手首 ROLL (axis Z, 手先の長軸まわり回旋)   [XM430]
-J6_TO_J7          = 0.040
+J6_TO_J7          = 0.028    # [実測]
 
 # --- グリッパ (並行 1 軸、両指は mimic で対称に直進開閉) ---
-GRIPPER_BASE_LEN   = 0.040   # J7 → 指の付け根
-GRIPPER_FINGER_LEN = 0.060   # 指の長さ
-GRIPPER_HALF_OPEN  = 0.050   # 片指の最大ストローク (m)。両側で合計 100mm 開く (※確認用に広め)
-GRIPPER_REST_Y     = 0.015   # 全閉時の指中心の Y オフセット (指の厚みぶん)
+GRIPPER_BASE_LEN   = 0.090   # J7軸 → 指の並進高さ Z [実測]
+GRIPPER_FINGER_LEN = 0.085   # 指の長さ (並進高さ → 指先 = TCP位置) [実測]
+GRIPPER_HALF_OPEN  = 0.037   # 片指の最大ストローク [実測]、両側合計74mm
+GRIPPER_REST_Y     = 0.01836 # 全閉時の指中心Y [実測]
 
 # --- 頭 (パン・チルト) ---
-NECK_BASE_HEIGHT  = 0.020    # 柱頂上 → パン軸 Z
-PAN_TO_TILT       = 0.040    # パン軸 → チルト軸 Z
-TILT_TO_CAMERA    = 0.030    # チルト軸 → カメラ光学中心 (X 前方)
+NECK_BASE_HEIGHT  = 0.043    # 柱頂上 → パン軸 Z [実測]
+PAN_TO_TILT_X     = 0.024    # パン軸 → チルト軸 X (前方) [実測]
+PAN_TO_TILT_Z     = 0.0195   # パン軸 → チルト軸 Z (上方) [実測]
+# TILT_TO_CAMERA: 実測56.25mm はチルト軸→センサ面までの距離。camera_link 原点は
+# body 中心 (STL の bbox 中心) で、センサ面はそこから STL の +X 端 +4.3mm。
+# よって URDF では 56.25 - 4.30 = 51.95mm
+TILT_TO_CAMERA    = 0.05195  # チルト軸 → カメラ body 中心 X [補正済]
 
 # --- 関節可動範囲 (rad) ---
 ARM_JOINT_LIMIT   = 2.6      # ~±150 deg, Dynamixel デフォルト相当
@@ -151,6 +154,37 @@ def link_empty(name):
 """
 
 
+def link_mesh(name, mesh_file, origin_xyz=(0, 0, 0), origin_rpy=(0, 0, 0),
+              scale=(0.001, 0.001, 0.001), color="black", mass=0.1, bbox=None):
+    """メッシュSTL を visual/collision に使うリンク。
+    bbox=(sx,sy,sz) [m] を渡すと box 近似で慣性を計算。"""
+    if bbox:
+        sx, sy, sz = bbox
+        ixx = mass * (sy*sy + sz*sz) / 12.0
+        iyy = mass * (sx*sx + sz*sz) / 12.0
+        izz = mass * (sx*sx + sy*sy) / 12.0
+    else:
+        ixx = iyy = izz = mass * 0.001
+    sxyz = " ".join(_fmt(x) for x in scale)
+    return f"""  <link name="{name}">
+    <visual>
+      <origin xyz="{_xyz(origin_xyz)}" rpy="{_xyz(origin_rpy)}"/>
+      <geometry><mesh filename="meshes/{mesh_file}" scale="{sxyz}"/></geometry>
+      <material name="{color}"/>
+    </visual>
+    <collision>
+      <origin xyz="{_xyz(origin_xyz)}" rpy="{_xyz(origin_rpy)}"/>
+      <geometry><mesh filename="meshes/{mesh_file}" scale="{sxyz}"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="{_fmt(mass)}"/>
+      <origin xyz="{_xyz(origin_xyz)}" rpy="{_xyz(origin_rpy)}"/>
+      <inertia ixx="{_fmt(ixx)}" iyy="{_fmt(iyy)}" izz="{_fmt(izz)}" ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </link>
+"""
+
+
 def joint(name, jtype, parent, child, xyz=(0, 0, 0), rpy=(0, 0, 0),
           axis=(0, 0, 1), lower=-ARM_JOINT_LIMIT, upper=ARM_JOINT_LIMIT,
           effort=EFFORT_LIMIT, velocity=VELOCITY_LIMIT, mimic=None):
@@ -209,11 +243,12 @@ def build_arm(side, y_sign):
         xyz=(0, 0, 0), axis=(0, 1, 0)))
 
     # J2: 肩 ROLL (axis X)  [XM540]
+    # J1→J2 は外側 (Y方向) オフセット。J1のブラケットが横に伸びてJ2を保持する構造。
     out.append(link_box(f"{p}link2", size=XM540, color="black", mass=0.165))
     out.append(joint(
         f"{p}joint2", "revolute",
         parent=f"{p}link1", child=f"{p}link2",
-        xyz=(0, 0, -J1_TO_J2), axis=(1, 0, 0)))
+        xyz=(0, y_sign * J1_TO_J2, 0), axis=(1, 0, 0)))
 
     # J3: 上腕 YAW (axis Z, 上腕長軸)  [XM540]
     out.append(link_cyl(f"{p}link3", radius=0.022, length=UPPER_ARM_LEN,
@@ -254,14 +289,14 @@ def build_arm(side, y_sign):
         parent=f"{p}link6", child=f"{p}link7",
         xyz=(0, 0, -J6_TO_J7), axis=(0, 0, 1)))
 
-    # グリッパ本体 (リンク7の先端、固定)
+    # グリッパ本体 (リンク7の先端に直接固定、フレーム原点はJ7軸)
     out.append(link_box(f"{p}gripper_base", size=(0.040, 0.060, GRIPPER_BASE_LEN),
                        origin_xyz=(0, 0, -GRIPPER_BASE_LEN / 2),
                        color="green", mass=0.05))
     out.append(joint(
         f"{p}gripper_base_fixed", "fixed",
         parent=f"{p}link7", child=f"{p}gripper_base",
-        xyz=(0, 0, -0.030)))
+        xyz=(0, 0, 0)))
 
     # 左指 (prismatic, +Y 方向に並進で開く)
     out.append(link_box(f"{p}finger_left", size=(0.010, 0.012, GRIPPER_FINGER_LEN),
@@ -308,42 +343,35 @@ def build_robot():
     out.append(link_empty("base_footprint"))
 
     # base_link: 柱の下半分 (床から腰軸まで、固定)
-    out.append(link_box(
-        "base_link",
-        size=(COLUMN_SIZE, COLUMN_SIZE, COLUMN_LOWER_LEN),
-        origin_xyz=(0, 0, COLUMN_LOWER_LEN / 2),
+    # STL: メッシュ原点 = 床中心 (Fusionで原点合わせ済み)
+    out.append(link_mesh(
+        "base_link", mesh_file="base_link.stl",
+        bbox=(0.088, 0.087, 0.273),  # 慣性近似用
         color="black", mass=2.0))
     out.append(joint(
         "base_footprint_to_base", "fixed",
         parent="base_footprint", child="base_link"))
 
-    # waist_link: 腰関節のハウジング (XM540 がここに入る)
-    out.append(link_cyl(
-        "waist_link", radius=WAIST_HOUSING_RADIUS, length=WAIST_HOUSING_HEIGHT,
-        color="green", mass=0.30))
+    # torso_link: 腰回転軸より上の回転する全部 (ハウジング + 上柱 + 肩マウントバー)
+    # 原点 = 腰回転軸 (Z=0 がこのリンク内では腰軸の高さ)
+    out.append(link_mesh(
+        "torso_link", mesh_file="torso_link.stl",
+        bbox=(0.087, 0.166, 0.2849),
+        color="black", mass=1.8))
 
-    # 腰関節: Z 軸まわり回転
+    # 腰関節: Z 軸まわり回転 (base_link → torso_link 直結)
     out.append(joint(
         "waist_joint", "revolute",
-        parent="base_link", child="waist_link",
+        parent="base_link", child="torso_link",
         xyz=(0, 0, COLUMN_LOWER_LEN), axis=(0, 0, 1),
         lower=-WAIST_LIMIT, upper=WAIST_LIMIT,
         effort=10.0, velocity=2.0))
 
-    # torso_link: 柱の上半分 (腰軸の上、肩マウントと頭が付く)
-    out.append(link_box(
-        "torso_link",
-        size=(COLUMN_SIZE, COLUMN_SIZE, COLUMN_UPPER_LEN),
-        origin_xyz=(0, 0, COLUMN_UPPER_LEN / 2),
-        color="black", mass=1.5))
-    out.append(joint(
-        "torso_fixed", "fixed",
-        parent="waist_link", child="torso_link",
-        xyz=(0, 0, WAIST_HOUSING_HEIGHT / 2)))
-
     # 頭 (パン・チルト + カメラ)
-    out.append(link_box(
-        "neck_pan_link", size=XM430, color="black", mass=0.082))
+    out.append(link_mesh(
+        "neck_pan_link", mesh_file="neck_pan_link.stl",
+        bbox=(0.0465, 0.0424, 0.0338),
+        color="black", mass=0.10))
     out.append(joint(
         "neck_pan_joint", "revolute",
         parent="torso_link", child="neck_pan_link",
@@ -352,31 +380,34 @@ def build_robot():
         lower=-NECK_PAN_LIMIT, upper=NECK_PAN_LIMIT,
         effort=3.0, velocity=3.0))
 
-    out.append(link_box(
-        "neck_tilt_link", size=XM430, color="black", mass=0.082))
+    out.append(link_mesh(
+        "neck_tilt_link", mesh_file="neck_tilt_link.stl",
+        bbox=(0.038, 0.065, 0.025),
+        color="black", mass=0.10))
     out.append(joint(
         "neck_tilt_joint", "revolute",
         parent="neck_pan_link", child="neck_tilt_link",
-        xyz=(0, 0, PAN_TO_TILT), axis=(0, 1, 0),
+        xyz=(PAN_TO_TILT_X, 0, PAN_TO_TILT_Z), axis=(0, 1, 0),
         lower=-NECK_TILT_LIMIT, upper=NECK_TILT_LIMIT,
         effort=3.0, velocity=3.0))
 
-    # カメラ本体 (Realsense 風の横長ボックス)
-    out.append(link_box(
-        "camera_link", size=(0.025, 0.090, 0.025),
-        origin_xyz=(TILT_TO_CAMERA, 0, 0),
+    # カメラ本体 (Realsense 等)
+    # camera_link フレーム = カメラ本体中心
+    out.append(link_mesh(
+        "camera_link", mesh_file="camera_link.stl",
+        bbox=(0.025, 0.090, 0.025),
         color="gray", mass=0.05))
     out.append(joint(
         "camera_fixed", "fixed",
         parent="neck_tilt_link", child="camera_link",
-        xyz=(0, 0, 0)))
+        xyz=(TILT_TO_CAMERA, 0, 0)))
 
     # 光学フレーム (ROS 規約: z=前方, x=右, y=下)
     out.append(link_empty("camera_optical_frame"))
     out.append(joint(
         "camera_optical_fixed", "fixed",
         parent="camera_link", child="camera_optical_frame",
-        xyz=(TILT_TO_CAMERA, 0, 0),
+        xyz=(0, 0, 0),
         rpy=(-1.5707963, 0.0, -1.5707963)))
 
     # 左右の腕
@@ -396,8 +427,7 @@ def main():
     print(f"Wrote {out_path} ({len(urdf):,} bytes)")
     # 簡単な検算
     total = COLUMN_LOWER_LEN + COLUMN_UPPER_LEN
-    print(f"Column total length: {total*1000:.1f} mm "
-          f"({'OK' if abs(total - 0.500) < 1e-6 else 'WARNING: expected 500 mm'})")
+    print(f"Column total length: {total*1000:.1f} mm (lower {COLUMN_LOWER_LEN*1000:.1f} + upper {COLUMN_UPPER_LEN*1000:.1f})")
 
 
 if __name__ == "__main__":
