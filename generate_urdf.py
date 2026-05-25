@@ -33,7 +33,7 @@ SHOULDER_BRACKET_Z         = -0.0275 # 柱頂上 → 肩J1軸のZ (負=下) [実
 # J2 = 肩 ROLL   (axis X, 腕を体側から外側へ開く) [XM540]
 J1_TO_J2          = 0.06725  # J1 → J2 の Z オフセット [実測]
 # J3 = 上腕 YAW  (axis Z, 上腕の長軸まわり回旋)   [XM540]
-J2_TO_J3          = 0.0805   # J2 → J3 の Z オフセット [実測]
+J2_TO_J3          = 0.0825   # J2 → J3 の Z オフセット [実測]
 # J4 = 肘 PITCH  (axis Y, 肘の屈伸)               [XM430]
 UPPER_ARM_LEN     = 0.041    # J3 → J4 [実測]
 # J5 = 前腕 YAW  (axis Z, 前腕の長軸まわり回旋)   [XM430]
@@ -53,10 +53,9 @@ GRIPPER_REST_Y     = 0.01836 # 全閉時の指中心Y [実測]
 NECK_BASE_HEIGHT  = 0.043    # 柱頂上 → パン軸 Z [実測]
 PAN_TO_TILT_X     = 0.024    # パン軸 → チルト軸 X (前方) [実測]
 PAN_TO_TILT_Z     = 0.0195   # パン軸 → チルト軸 Z (上方) [実測]
-# TILT_TO_CAMERA: 実測56.25mm はチルト軸→センサ面までの距離。camera_link 原点は
-# body 中心 (STL の bbox 中心) で、センサ面はそこから STL の +X 端 +4.3mm。
-# よって URDF では 56.25 - 4.30 = 51.95mm
-TILT_TO_CAMERA    = 0.05195  # チルト軸 → カメラ body 中心 X [補正済]
+# TILT_TO_CAMERA: チルト軸→センサ面の距離。camera_link 原点 = カメラSTL原点 = センサ面
+# なので実測値そのまま。
+TILT_TO_CAMERA    = 0.05625  # チルト軸 → カメラセンサ面 X 前方 [実測]
 
 # --- 関節可動範囲 (rad) ---
 ARM_JOINT_LIMIT   = 2.6      # ~±150 deg, Dynamixel デフォルト相当
